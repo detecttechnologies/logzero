@@ -100,7 +100,7 @@ if os.name == 'nt':
     colorama_init()
 
 
-def setup_logger(name=__name__, logfile=None, level=DEBUG, formatter=None, maxBytes=0, backupCount=0, fileLoglevel=None, log_stream='stderr', isRootLogger=False, json=False, json_ensure_ascii=False):
+def setup_logger(name=__name__, logfile=None, level=DEBUG, formatter=None, maxBytes=1e6, backupCount=2, fileLoglevel=None, log_stream='stderr', isRootLogger=False, json=False, json_ensure_ascii=False):
     """
     Configures and returns a fully configured logger instance, no hassles.
     If a logger with the specified name already exists, it returns the existing instance,
@@ -178,13 +178,17 @@ def setup_logger(name=__name__, logfile=None, level=DEBUG, formatter=None, maxBy
     if logfile:
         # Create the folder for holding the logfile, if it doesn't already exist
         Path(logfile).parent.mkdir(parents=True, exist_ok=True)
-        
-        rotating_filehandler = RotatingFileHandler(filename=logfile, maxBytes=maxBytes, backupCount=backupCount)
+        rotating_filehandler = RotatingFileHandler(
+            filename=logfile, maxBytes=maxBytes, backupCount=backupCount
+        )
         setattr(rotating_filehandler, LOGZERO_INTERNAL_LOGGER_ATTR, True)
         rotating_filehandler.setLevel(fileLoglevel or level)
-        rotating_filehandler.setFormatter(_formatter)
+        formatter = LogFormatter(
+            fmt='{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}'
+        )
+        # rotating_filehandler.setFormatter(_formatter)
+        rotating_filehandler.setFormatter(formatter)
         _logger.addHandler(rotating_filehandler)
-
     return _logger
 
 
@@ -395,7 +399,8 @@ def reset_default_logger():
     global _logfile
     global _formatter
     _loglevel = DEBUG
-    _logfile = None
+    #_logfile = None
+    _logfile = "logfiles/general_logs/general_logs.log"
     _formatter = None
 
     # Remove all handlers on exiting logger
