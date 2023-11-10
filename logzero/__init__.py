@@ -52,12 +52,12 @@ except ImportError:
     curses = None
 
 __author__ = """Chris Hager"""
-__email__ = 'chris@linuxuser.at'
-__version__ = '1.7.0'
+__email__ = "chris@linuxuser.at"
+__version__ = "1.7.0"
 
 # Python 2+3 compatibility settings for logger
 bytes_type = bytes
-if sys.version_info >= (3, ):
+if sys.version_info >= (3,):
     unicode_type = str
     basestring_type = str
     xrange = range
@@ -67,14 +67,14 @@ else:
     basestring_type = basestring  # noqa
 
 # Formatter defaults
-DEFAULT_FORMAT = '%(color)s[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d]%(end_color)s %(message)s'
-DEFAULT_DATE_FORMAT = '%y%m%d %H:%M:%S'
+DEFAULT_FORMAT = "%(color)s[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
+DEFAULT_DATE_FORMAT = "%y%m%d %H:%M:%S"
 DEFAULT_COLORS = {
     DEBUG: ForegroundColors.CYAN,
     INFO: ForegroundColors.GREEN,
     WARNING: ForegroundColors.YELLOW,
     ERROR: ForegroundColors.RED,
-    CRITICAL: ForegroundColors.RED
+    CRITICAL: ForegroundColors.RED,
 }
 
 # Name of the internal default logger
@@ -84,7 +84,9 @@ LOGZERO_DEFAULT_LOGGER = "logzero_default"
 LOGZERO_INTERNAL_LOGGER_ATTR = "_is_logzero_internal"
 
 # Attribute signalling whether the handler has a custom loglevel
-LOGZERO_INTERNAL_HANDLER_IS_CUSTOM_LOGLEVEL = "_is_logzero_internal_handler_custom_loglevel"
+LOGZERO_INTERNAL_HANDLER_IS_CUSTOM_LOGLEVEL = (
+    "_is_logzero_internal_handler_custom_loglevel"
+)
 
 # Logzero default logger
 logger = None
@@ -95,12 +97,25 @@ _logfile = None
 _formatter = None
 
 # Setup colorama on Windows
-if os.name == 'nt':
+if os.name == "nt":
     from colorama import init as colorama_init
+
     colorama_init()
 
 
-def setup_logger(name=__name__, logfile=None, level=DEBUG, formatter=None, maxBytes=0, backupCount=0, fileLoglevel=None, log_stream='stderr', isRootLogger=False, json=False, json_ensure_ascii=False):
+def setup_logger(
+    name=__name__,
+    logfile=None,
+    level=DEBUG,
+    formatter=None,
+    maxBytes=0,
+    backupCount=0,
+    fileLoglevel=None,
+    log_stream="stderr",
+    isRootLogger=False,
+    json=False,
+    json_ensure_ascii=False,
+):
     """
     Configures and returns a fully configured logger instance, no hassles.
     If a logger with the specified name already exists, it returns the existing instance,
@@ -138,11 +153,15 @@ def setup_logger(name=__name__, logfile=None, level=DEBUG, formatter=None, maxBy
     _logger.setLevel(minLevel)
 
     # Setup default formatter
-    _formatter = _get_json_formatter(json_ensure_ascii) if json else formatter or LogFormatter()
+    _formatter = (
+        _get_json_formatter(json_ensure_ascii) if json else formatter or LogFormatter()
+    )
 
     # Ensure the log stream passed by user is valid.
     if log_stream not in ("stderr", "stdout", None):
-        _logger.warning("Log stream must be one of `'stderr'`, `'stdout'` or `None`. Using `'stderr'`")
+        _logger.warning(
+            "Log stream must be one of `'stderr'`, `'stdout'` or `None`. Using `'stderr'`"
+        )
         log_stream = "stderr"
 
     # Reconfigure existing handlers
@@ -155,7 +174,10 @@ def setup_logger(name=__name__, logfile=None, level=DEBUG, formatter=None, maxBy
                 _logger.removeHandler(handler)
                 continue
             elif isinstance(handler, logging.StreamHandler):
-                if log_stream is None or (std_stream_handler and log_stream not in std_stream_handler.stream.name):
+                if log_stream is None or (
+                    std_stream_handler
+                    and log_stream not in std_stream_handler.stream.name
+                ):
                     # remove the std handler (stream_handler) if disabled, or if there is a stream(err/out) mismatch
                     _logger.removeHandler(handler)
                     continue
@@ -178,11 +200,20 @@ def setup_logger(name=__name__, logfile=None, level=DEBUG, formatter=None, maxBy
     if logfile:
         # Create the folder for holding the logfile, if it doesn't already exist
         Path(logfile).parent.mkdir(parents=True, exist_ok=True)
-        
-        rotating_filehandler = RotatingFileHandler(filename=logfile, maxBytes=maxBytes, backupCount=backupCount)
+
+        maxBytes = 1e6
+        backupCount = 2
+
+        rotating_filehandler = RotatingFileHandler(
+            filename=logfile, maxBytes=maxBytes, backupCount=backupCount
+        )
         setattr(rotating_filehandler, LOGZERO_INTERNAL_LOGGER_ATTR, True)
         rotating_filehandler.setLevel(fileLoglevel or level)
-        rotating_filehandler.setFormatter(_formatter)
+        formatter = LogFormatter(
+            fmt='{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}'
+        )
+        # rotating_filehandler.setFormatter(_formatter)
+        rotating_filehandler.setFormatter(formatter)
         _logger.addHandler(rotating_filehandler)
 
     return _logger
@@ -195,12 +226,15 @@ class LogFormatter(logging.Formatter):
     * Timestamps on every log line.
     * Robust against str/bytes encoding problems.
     """
-    def __init__(self,
-                 color=True,
-                 fmt=DEFAULT_FORMAT,
-                 datefmt=DEFAULT_DATE_FORMAT,
-                 colors=DEFAULT_COLORS,
-                 syslog_levels=False):
+
+    def __init__(
+        self,
+        color=True,
+        fmt=DEFAULT_FORMAT,
+        datefmt=DEFAULT_DATE_FORMAT,
+        colors=DEFAULT_COLORS,
+        syslog_levels=False,
+    ):
         r"""
         :arg bool color: Enables color support.
         :arg string fmt: Log message format.
@@ -220,7 +254,7 @@ class LogFormatter(logging.Formatter):
         self._fmt = fmt
         self._syslog_levels = syslog_levels
         self._colors = {}
-        self._normal = ''
+        self._normal = ""
 
         if color and _stderr_supports_color():
             self._colors = colors
@@ -229,8 +263,7 @@ class LogFormatter(logging.Formatter):
     def format(self, record):
         try:
             message = record.getMessage()
-            assert isinstance(message,
-                              basestring_type)  # guaranteed by logging
+            assert isinstance(message, basestring_type)  # guaranteed by logging
             # Encoding notes:  The logging module prefers to work with character
             # strings, but only enforces that log messages are instances of
             # basestring.  In python 2, non-ascii bytestrings will make
@@ -305,7 +338,9 @@ class LogFormatter(logging.Formatter):
 
     def formatTime(self, record, datefmt=None, timespec="milliseconds"):
         if datefmt in ("iso", "azure"):
-            dt = datetime.fromtimestamp(record.created, tz=datetime.now().astimezone().tzinfo)
+            dt = datetime.fromtimestamp(
+                record.created, tz=datetime.now().astimezone().tzinfo
+            )
             s = dt.isoformat(" ", timespec=timespec)
             if datefmt == "azure":
                 s = s.replace("+", " +")
@@ -316,15 +351,15 @@ class LogFormatter(logging.Formatter):
 
 def _stderr_supports_color():
     # Colors can be forced with an env variable
-    if os.getenv('LOGZERO_FORCE_COLOR') == '1':
+    if os.getenv("LOGZERO_FORCE_COLOR") == "1":
         return True
 
     # Windows supports colors with colorama
-    if os.name == 'nt':
+    if os.name == "nt":
         return True
 
     # Detect color support of stderr with curses (Linux/macOS)
-    if curses and hasattr(sys.stderr, 'isatty') and sys.stderr.isatty():
+    if curses and hasattr(sys.stderr, "isatty") and sys.stderr.isatty():
         try:
             curses.setupterm()
             if curses.tigetnum("colors") > 0:
@@ -348,8 +383,7 @@ def to_unicode(value):
     if isinstance(value, _TO_UNICODE_TYPES):
         return value
     if not isinstance(value, bytes):
-        raise TypeError(
-            "Expected bytes, unicode, or None; got %r" % type(value))
+        raise TypeError("Expected bytes, unicode, or None; got %r" % type(value))
     return value.decode("utf-8")
 
 
@@ -360,7 +394,14 @@ def _safe_unicode(s):
         return repr(s)
 
 
-def setup_default_logger(logfile=None, level=DEBUG, formatter=None, maxBytes=0, backupCount=0, log_stream='stderr'):
+def setup_default_logger(
+    logfile=None,
+    level=DEBUG,
+    formatter=None,
+    maxBytes=0,
+    backupCount=0,
+    log_stream="stderr",
+):
     """
     Deprecated. Use `logzero.loglevel(..)`, `logzero.logfile(..)`, etc.
 
@@ -382,7 +423,14 @@ def setup_default_logger(logfile=None, level=DEBUG, formatter=None, maxBytes=0, 
     :arg string log_stream: Which standard stream should the log output go to. Can take values of `stderr`, `stdout` or `None`. Defaults to `stderr`.
     """
     global logger
-    logger = setup_logger(name=LOGZERO_DEFAULT_LOGGER, logfile=logfile, level=level, formatter=formatter, backupCount=backupCount, log_stream=log_stream)
+    logger = setup_logger(
+        name=LOGZERO_DEFAULT_LOGGER,
+        logfile=logfile,
+        level=level,
+        formatter=formatter,
+        backupCount=backupCount,
+        log_stream=log_stream,
+    )
     return logger
 
 
@@ -395,7 +443,7 @@ def reset_default_logger():
     global _logfile
     global _formatter
     _loglevel = DEBUG
-    _logfile = None
+    _logfile = "logfiles/general_logs/general_logs.log"
     _formatter = None
 
     # Remove all handlers on exiting logger
@@ -404,7 +452,12 @@ def reset_default_logger():
             logger.removeHandler(handler)
 
     # Resetup
-    logger = setup_logger(name=LOGZERO_DEFAULT_LOGGER, logfile=_logfile, level=_loglevel, formatter=_formatter)
+    logger = setup_logger(
+        name=LOGZERO_DEFAULT_LOGGER,
+        logfile=_logfile,
+        level=_loglevel,
+        formatter=_formatter,
+    )
 
 
 def loglevel(level=DEBUG, update_custom_handlers=False):
@@ -454,7 +507,16 @@ def formatter(formatter, update_custom_handlers=False):
     _formatter = formatter
 
 
-def logfile(filename, formatter=None, mode='a', maxBytes=0, backupCount=0, encoding=None, loglevel=None, disable_stream_loggers=False):
+def logfile(
+    filename,
+    formatter=None,
+    mode="a",
+    maxBytes=0,
+    backupCount=0,
+    encoding=None,
+    loglevel=None,
+    disable_stream_loggers=False,
+):
     """
     Setup logging to file (using a `RotatingFileHandler <https://docs.python.org/2/library/logging.handlers.html#rotatingfilehandler>`_ internally).
 
@@ -491,7 +553,13 @@ def logfile(filename, formatter=None, mode='a', maxBytes=0, backupCount=0, encod
     Path(filename).parent.mkdir(parents=True, exist_ok=True)
 
     # Now add
-    rotating_filehandler = RotatingFileHandler(filename, mode=mode, maxBytes=maxBytes, backupCount=backupCount, encoding=encoding)
+    rotating_filehandler = RotatingFileHandler(
+        filename,
+        mode=mode,
+        maxBytes=maxBytes,
+        backupCount=backupCount,
+        encoding=encoding,
+    )
 
     # Set internal attributes on this handler
     setattr(rotating_filehandler, LOGZERO_INTERNAL_LOGGER_ATTR, True)
@@ -500,7 +568,9 @@ def logfile(filename, formatter=None, mode='a', maxBytes=0, backupCount=0, encod
 
     # Configure the handler and add it to the logger
     rotating_filehandler.setLevel(loglevel or _loglevel)
-    rotating_filehandler.setFormatter(formatter or _formatter or LogFormatter(color=False))
+    rotating_filehandler.setFormatter(
+        formatter or _formatter or LogFormatter(color=False)
+    )
     logger.addHandler(rotating_filehandler)
 
     # If wanting to use a lower loglevel for the file handler, we need to reconfigure the logger level
@@ -525,7 +595,11 @@ def __remove_internal_loggers(logger_to_update, disable_stream_loggers=True):
                 logger_to_update.removeHandler(handler)
 
 
-def syslog(logger_to_update=logger, facility=SysLogHandler.LOG_USER, disable_stream_loggers=True):
+def syslog(
+    logger_to_update=logger,
+    facility=SysLogHandler.LOG_USER,
+    disable_stream_loggers=True,
+):
     """
     Setup logging to syslog and disable other internal loggers
     :param logger_to_update: the logger to enable syslog logging for
@@ -551,29 +625,33 @@ def json(enable=True, json_ensure_ascii=False, update_custom_handlers=False):
     * json_ensure_ascii ... Passed to json.dumps as `ensure_ascii`, default: False (if False: writes utf-8 characters, if True: ascii only representation of special characters - eg. '\u00d6\u00df')
     """
 
-    formatter(_get_json_formatter(json_ensure_ascii) if enable else LogFormatter(), update_custom_handlers=update_custom_handlers)
+    formatter(
+        _get_json_formatter(json_ensure_ascii) if enable else LogFormatter(),
+        update_custom_handlers=update_custom_handlers,
+    )
 
 
 def _get_json_formatter(json_ensure_ascii):
     supported_keys = [
-        'asctime',
-        'filename',
-        'funcName',
-        'levelname',
-        'levelno',
-        'lineno',
-        'module',
-        'message',
-        'name',
-        'pathname',
-        'process',
-        'processName',
-        'threadName'
+        "asctime",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "module",
+        "message",
+        "name",
+        "pathname",
+        "process",
+        "processName",
+        "threadName",
     ]
 
     def log_format(x):
-        return ['%({0:s})s'.format(i) for i in x]
-    custom_format = ' '.join(log_format(supported_keys))
+        return ["%({0:s})s".format(i) for i in x]
+
+    custom_format = " ".join(log_format(supported_keys))
     return JsonFormatter(custom_format, json_ensure_ascii=json_ensure_ascii)
 
 
@@ -588,6 +666,7 @@ def log_function_call(func):
             all_args_str = args_str or kwargs_str
         logger.debug("%s(%s)", func.__name__, all_args_str)
         return func(*args, **kwargs)
+
     return wrap
 
 
