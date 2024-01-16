@@ -182,6 +182,7 @@ def setup_logger(name=__name__, logfile=None, level=DEBUG, formatter=None, maxBy
             filename=logfile, maxBytes=maxBytes, backupCount=backupCount
         )
         setattr(rotating_filehandler, LOGZERO_INTERNAL_LOGGER_ATTR, True)
+        fileLoglevel = INFO
         rotating_filehandler.setLevel(fileLoglevel or level)
         formatter = LogFormatter(
             fmt='{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}'
@@ -398,7 +399,7 @@ def reset_default_logger():
     global _loglevel
     global _logfile
     global _formatter
-    _loglevel = DEBUG
+    _loglevel = INFO
     #_logfile = None
     _logfile = "logfiles/general_logs/general_logs.log"
     _formatter = None
